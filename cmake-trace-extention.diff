@@ -1,0 +1,13 @@
+diff --git a/Source/cmMakefile.cxx b/Source/cmMakefile.cxx
+index 25ccbc7..0e6725c 100644
+--- a/Source/cmMakefile.cxx
++++ b/Source/cmMakefile.cxx
+@@ -361,6 +361,8 @@ bool cmMakefile::GetBacktrace(cmListFileBacktrace& backtrace) const
+ void cmMakefile::PrintCommandTrace(const cmListFileFunction& lff)
+ {
+   cmOStringStream msg;
++  msg << "(" << std::fixed << cmSystemTools::GetTime();
++  msg << ") (" << this->CallStack.size() << ") ";
+   msg << lff.FilePath << "(" << lff.Line << "):  ";
+   msg << lff.Name << "(";
+   for(std::vector<cmListFileArgument>::const_iterator i =

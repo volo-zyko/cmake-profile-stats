@@ -10,16 +10,27 @@ import shelve
 import argparse
 
 def process_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(epilog='Each trace line in a report '
+        'has 6 distinct parts: 1) nesting level in square brackets; 2) path '
+        'to original cmake script (maybe with dots in the middle and dots at '
+        'the end if -w option was used) followed by colon; 3) line number of '
+        'a traced line in original cmake script followed by colon; 4) a line '
+        'of code as it was traced by cmake; 5) cumulative execution time '
+        'of a traced line in seconds in brackets; 6) percentage of cumulative '
+        'execution time of a traced line to whole execution time in brackets.')
 
     parser.add_argument('trace', nargs='?', default=None,
         help='cmake trace log or stdin')
     parser.add_argument('-f', '--shelve-file', default='cmake.traces',
-        help='a file for shelf container {default: %(default)s}')
+        help='file for shelf container {default: %(default)s}')
     parser.add_argument('-t', '--threshold',
         default=0, type=float,
         help='don\'t report traces with relative time lower than threshold, '
              'for example 0.01 corresponds to 1%% of the whole execution time '
+             '{default: %(default)s}')
+    parser.add_argument('-w', '--trace-info-width', default=None, type=int,
+        help='fixed width in characters of a variable part of cmake trace '
+             '(file name, line number, nesting) in generated report '
              '{default: %(default)s}')
     parser.add_argument('-s', '--sort-traces',
         default=False, action='store_true',
@@ -43,9 +54,27 @@ class CmakeTraceInfo(object):
         self.cmakeLine = cmakeLine
         self.cmakeCodeLine = cmakeCodeLine
 
-    def __str__(self):
-        return ('%s(%s): %s' %
-                (self.cmakeFile, self.cmakeLine, self.cmakeCodeLine))
+    def to_string_adjusted(self, width, nesting):
+        fileWidth = width - (len(self.cmakeLine) + len(nesting))
+        cmakeFileLen = len(self.cmakeFile)
+
+        if fileWidth < cmakeFileLen:
+            assert fileWidth >= 5
+            halfFileWidth = fileWidth / 2
+            adjustedFile = ('%s...%s' %
+                (self.cmakeFile[:halfFileWidth - 1],
+                 self.cmakeFile[cmakeFileLen + 2 - halfFileWidth:]))
+            adjustedFile = adjustedFile.ljust(fileWidth, '.')
+        else:
+            adjustedFile = self.cmakeFile.ljust(fileWidth, '.')
+
+        return ('[%s]%s:%s: %s' %
+                (nesting, adjustedFile, self.cmakeLine, self.cmakeCodeLine))
+
+    def to_string_plain(self, width, nesting):
+        assert width is None
+        return ('[%s]%s:%s: %s' %
+                (nesting, self.cmakeFile, self.cmakeLine, self.cmakeCodeLine))
 
     def key(self):
         # File name is reversed because it makes string comparison faster.
@@ -159,19 +188,21 @@ def collect_stats(traces, traceKeys):
 
     return prevTimeval - startTimeRef[0]
 
-def print_trace(args, trace, duration, indent):
+def print_trace(args, tiToString, trace, duration, indent):
     if trace.duration / duration < args.threshold:
         return False
 
-    print("%s%s (%f)(%f%%)" % (' ' * indent,
-                               str(trace.traceInfo),
-                               trace.duration,
-                               trace.duration / duration * 100))
+    print("%s%s (%fsec)(%f%%)" %
+        (' ' * indent,
+         tiToString(trace.traceInfo, args.trace_info_width, str(indent + 1)),
+         trace.duration, trace.duration / duration * 100))
+
     for t in sorted(trace.traces,
                     key=lambda x: x.duration if args.sort_traces
                                   else x.traceInfo.cmakeLine,
                     reverse=True):
-        print_trace(args, t, duration, indent + 1)
+        print_trace(args, tiToString, t, duration, indent + 1)
+
     return True
 
 
@@ -207,9 +238,15 @@ if __name__ == '__main__':
         os.remove(args.shelve_file)
         raise
 
+    traceInfoToString = CmakeTraceInfo.to_string_plain
+    if args.trace_info_width is not None:
+        traceInfoToString = CmakeTraceInfo.to_string_adjusted
+
     for (k, d) in sorted(allTraceKeys.iteritems(),
                          key=lambda x: x[1], reverse=True):
-        if not print_trace(args, allTraces[k], wholeDuration, 0) or args.one:
+        if (not print_trace(args, traceInfoToString,
+                            allTraces[k], wholeDuration, 0) or
+            args.one):
             break
         print('')
 

@@ -25,7 +25,7 @@ def process_arguments():
         help='file for shelf container {default: %(default)s}')
     parser.add_argument('-t', '--threshold',
         default=0, type=float,
-        help='don\'t report traces with relative time lower than threshold, '
+        help='do not report traces with relative time lower than threshold, '
              'for example 0.01 corresponds to 1%% of the whole execution time '
              '{default: %(default)s}')
     parser.add_argument('-w', '--trace-info-width', default=None, type=int,
@@ -38,7 +38,7 @@ def process_arguments():
              '{default: %(default)s}')
     parser.add_argument('-r', '--report-only',
         default=False, action='store_true',
-        help='don\'t collect stats, make a report from shelved stats instead '
+        help='do not collect stats, make a report from shelved stats instead '
              '{default: %(default)s}')
     parser.add_argument('-1', '--one',
         default=False, action='store_true',
@@ -58,15 +58,15 @@ class CmakeTraceInfo(object):
         fileWidth = width - (len(self.cmakeLine) + len(nesting))
         cmakeFileLen = len(self.cmakeFile)
 
+        adjustedFile = self.cmakeFile
         if fileWidth < cmakeFileLen:
             assert fileWidth >= 5
             halfFileWidth = fileWidth / 2
             adjustedFile = ('%s...%s' %
-                (self.cmakeFile[:halfFileWidth - 1],
-                 self.cmakeFile[cmakeFileLen + 2 - halfFileWidth:]))
-            adjustedFile = adjustedFile.ljust(fileWidth, '.')
-        else:
-            adjustedFile = self.cmakeFile.ljust(fileWidth, '.')
+                (adjustedFile[:halfFileWidth - 1],
+                 adjustedFile[cmakeFileLen + 2 - halfFileWidth:]))
+
+        adjustedFile = adjustedFile.ljust(fileWidth, '.')
 
         return ('[%s]%s:%s: %s' %
                 (nesting, adjustedFile, self.cmakeLine, self.cmakeCodeLine))

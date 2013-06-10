@@ -30,7 +30,7 @@ def process_arguments():
             During script execution it can output to stderr lines that it
             does not recognize as cmake trace lines. Normally such lines
             originate from cmake script's messages and this script output
-            those lines starting with 'Ignored: ' string.
+            those lines starting with "Ignored: " string.
         '''))
 
     parser.add_argument('trace', nargs='?', default=None,

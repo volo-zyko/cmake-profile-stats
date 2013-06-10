@@ -8,16 +8,30 @@ import os
 import fileinput
 import shelve
 import argparse
+import textwrap
 
 def process_arguments():
-    parser = argparse.ArgumentParser(epilog='Each trace line in a report '
-        'has 6 distinct parts: 1) nesting level in square brackets; 2) path '
-        'to original cmake script (maybe with dots in the middle and dots at '
-        'the end if -w option was used) followed by colon; 3) line number of '
-        'a traced line in original cmake script followed by colon; 4) a line '
-        'of code as it was traced by cmake; 5) cumulative execution time '
-        'of a traced line in seconds in brackets; 6) percentage of cumulative '
-        'execution time of a traced line to whole execution time in brackets.')
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=textwrap.dedent('''\
+            Each trace line in a report has 6 distinct parts:
+            1) nesting level in square brackets;
+            2) path to original cmake script (maybe with dots in the middle and
+               dots at the end if -w option was used) followed by colon;
+            3) line number of a traced line in the original cmake script
+               followed by colon;
+            4) a line of code as it was traced by cmake;
+            5) cumulative execution time of a traced line in seconds in brackets;
+            6) percentage of cumulative execution time of a traced line to
+               whole execution time in brackets.
+            In short format is as follows:
+            [nesting]file_path:line_number: cmake_code (seconds) (percentage)
+
+            During script execution it can output to stderr lines that it
+            does not recognize as cmake trace lines. Normally such lines
+            originate from cmake script's messages and this script output
+            those lines starting with 'Ignored: ' string.
+        '''))
 
     parser.add_argument('trace', nargs='?', default=None,
         help='cmake trace log or stdin')
@@ -99,7 +113,7 @@ def update_trace(newTimeval, prevTimeval, prevTi, nestingGrew,
                  appendTrace, traces, startTimeRef):
     try:
         duration = newTimeval - prevTimeval
-        assert duration > 0
+        assert duration >= 0
     except TypeError:
         # This exception can happen only for the very first trace line.
         assert len(startTimeRef) == 0
@@ -148,14 +162,14 @@ def collect_stats(traces, traceKeys):
         if m is None:
             # This will log to stderr all lines that didn't match which will
             # provide: 1) control over matching; 2) a filling of progress. :)
-            print('Ignore: %s' % line, end='', file=sys.stderr)
+            print('Ignored: %s' % line, end='', file=sys.stderr)
             continue
 
         timeval = float(m.group(1))
         nesting = int(m.group(2))
         cmakeFile = m.group(3)
         cmakeLine = m.group(4)
-        cmakeCodeLine = m.group(5)
+        cmakeCodeLine = m.group(5).rstrip() # Strip possible /r on Windows.
 
         # Make sure that cmake trace doesn't miss any lines when nesting
         # increases (if there are bugs in cmake logging). Missing lines when

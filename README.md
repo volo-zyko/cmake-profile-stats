@@ -8,7 +8,8 @@ Short help about usage of this script:
 
 ```
 usage: cmake-profile-stat.py [-h] [-f SHELVE_FILE] [-t THRESHOLD] [-d DEPTH]
-                             [-w TRACE_INFO_WIDTH] [-s] [-r] [-1] [-v]
+                             [--ignore-nesting] [-w TRACE_INFO_WIDTH] [-s]
+                             [-r] [-1] [-v]
                              [trace]
 
 Process cmake execution log produced with --trace/--trace-expand command line

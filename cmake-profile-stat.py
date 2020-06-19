@@ -88,13 +88,13 @@ class _CmakeTraceInfo(object):
         self.cmake_code_line = cmake_code_line
 
     def to_string_adjusted(self, width, nesting):
-        file_width = width - (len(self.cmake_line) + len(nesting))
+        file_width = width - (len(str(self.cmake_line)) + len(nesting))
         cmake_file_len = len(self.cmake_file)
 
         adjusted_file = self.cmake_file
         if file_width < cmake_file_len:
             assert file_width >= 5
-            half_file_width = file_width / 2
+            half_file_width = file_width // 2
             adjusted_file = '{}...{}'.format(
                 adjusted_file[:half_file_width - 1],
                 adjusted_file[cmake_file_len + 2 - half_file_width:])
